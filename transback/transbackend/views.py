@@ -6,6 +6,9 @@ from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes, force_str
 from django.urls import reverse
 from django.contrib.auth.forms import SetPasswordForm
+from django.shortcuts import render
+from django.http import JsonResponse
+from .models import User
 
 
 def request_password_reset(request):
@@ -60,14 +63,14 @@ def register(request):
         username = request.POST.get('username')
         email = request.POST.get('email')
         password = request.POST.get('password')
+        profile_picture = request.FILES.get('profile_picture')
 
         if username and email and password:
             if User.objects.filter(username=username).exists():
                 return JsonResponse({"error": "Username already taken."}, status=400)
             if User.objects.filter(email=email).exists():
                 return JsonResponse({"error": "Email already in use."}, status=400)
-
-            user = User(username=username, email=email)
+            user = User(username=username, email=email, profile_picture=profile_picture)
             user.set_password(password)
             user.save()
 
@@ -91,5 +94,22 @@ def login(request):
             return JsonResponse({"message": "Login successful!"}, status=200)
         else:
             return JsonResponse({"error": "Invalid username or password."}, status=401)
+
+    return JsonResponse({"error": "Invalid request method."}, status=405)
+
+def upload_profile_picture(request):
+    if request.method == 'POST':
+        user_id = request.POST.get('userId')
+        try:
+            user = User.objects.get(pk=user_id)
+            if 'profile_picture' in request.FILES:
+                profile_picture = request.FILES['profile_picture']
+                user.profile_picture.save(profile_picture.name, profile_picture)
+                user.save()
+                return JsonResponse({"message": "Profile picture updated!"}, status=200)
+            else:
+                return JsonResponse({"error": "No picture uploaded."}, status=400)
+        except User.DoesNotExist:
+            return JsonResponse({"error": "User not found."}, status=404)
 
     return JsonResponse({"error": "Invalid request method."}, status=405)
