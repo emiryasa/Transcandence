@@ -6,10 +6,18 @@ from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes, force_str
 from django.urls import reverse
 from django.contrib.auth.forms import SetPasswordForm
-from django.shortcuts import render
-from django.http import JsonResponse
 from .models import User
+from django.views.decorators.csrf import csrf_exempt
+import json
+from django.contrib.auth.hashers import make_password
+from django.shortcuts import render
 
+def home_view(request):
+    return render(request, 'transbackend/home.html')
+
+
+def login_view(request):
+    return render(request, 'transbackend/login.html')
 
 def request_password_reset(request):
     if request.method == 'POST':
@@ -57,29 +65,33 @@ def reset_password(request, uidb64, token):
 def hello_world(request):
     return HttpResponse("Hello, World!")
 
-
+@csrf_exempt
 def register(request):
     if request.method == 'POST':
-        username = request.POST.get('username')
-        email = request.POST.get('email')
-        password = request.POST.get('password')
-        profile_picture = request.FILES.get('profile_picture')
+        try:
+            data = json.loads(request.body)
+            username = data.get('username')
+            email = data.get('email')
+            password = data.get('password')
 
-        if username and email and password:
-            if User.objects.filter(username=username).exists():
-                return JsonResponse({"error": "Username already taken."}, status=400)
-            if User.objects.filter(email=email).exists():
-                return JsonResponse({"error": "Email already in use."}, status=400)
-            user = User(username=username, email=email, profile_picture=profile_picture)
-            user.set_password(password)
-            user.save()
+            if username and email and password:
+                if User.objects.filter(username=username).exists():
+                    return JsonResponse({"error": "Username already taken."}, status=400)
+                if User.objects.filter(email=email).exists():
+                    return JsonResponse({"error": "Email already in use."}, status=400)
 
-            return JsonResponse({"message": "Registration successful!"}, status=201)
-        else:
-            return JsonResponse({"error": "All fields are required."}, status=400)
+                hashed_password = make_password(password)  # Şifreyi hashle
+                user = User(username=username, email=email, password=hashed_password)
+                user.save()
+
+                return JsonResponse({"message": "Registration successful!"}, status=201)
+            else:
+                return JsonResponse({"error": "All fields are required."}, status=400)
+
+        except json.JSONDecodeError:
+            return JsonResponse({"error": "Invalid JSON data."}, status=400)
 
     return JsonResponse({"error": "Invalid request method."}, status=405)
-
 
 def login(request):
     if request.method == 'POST':

@@ -1,20 +1,14 @@
-# myapp/urls.py
-
 from django.urls import path
-from .views import hello_world
-from .views import register
 from django.urls import path
-from .views import request_password_reset, reset_password
-from django.conf import settings
-from django.conf.urls.static import static
-
+from .views import request_password_reset, reset_password, register, login
+from .views import home_view, login_view
 
 urlpatterns = [
-    path('', hello_world, name='hello_world'),
-    path('register/', register, name='register'),
-    path('request-password-reset/', request_password_reset, name='request_password_reset'),
-    path('reset-password/<uidb64>/<token>/', reset_password, name='reset_password'),
+    path('', home_view, name='home'),
+    path('home/', home_view, name='home'),
+    path('login/', login_view, name='login'),
+    path('api/register/', register, name='register'),
+    path('api/login/', login, name='login'),
+    path('api/request-password-reset/', request_password_reset, name='request_password_reset'),
+    path('api/reset-password/<uidb64>/<token>/', reset_password, name='reset_password'),
 ]
-
-if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
